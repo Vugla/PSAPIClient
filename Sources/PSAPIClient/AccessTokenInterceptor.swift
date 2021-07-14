@@ -21,6 +21,7 @@ public protocol OauthTokenProvider {
     var accessToken: String? { get set }
     var refreshToken: String? { get set }
     var authPaths: [String] { get }
+    var doNotRefreshPaths: [String] { get }
     func logout()
     func getNewToken(_ token: String) -> AnyPublisher<Response, NetworkError<ErrorType>>
 }
@@ -50,10 +51,9 @@ public class AccessTokenInterceptor<T: OauthTokenProvider>: RequestInterceptor {
     }
     
     public func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {
-        
         guard let response = request.task?.response as? HTTPURLResponse,
             response.statusCode == 401,
-            request.task?.currentRequest?.url?.absoluteString.contains("user/app/token/refresh") == false
+            request.task?.currentRequest?.pathContains(anyOf: accessTokenProvider.doNotRefreshPaths) == false
             else { return completion(.doNotRetryWithError(error)) }
         
         guard let currentRefreshToken = accessTokenProvider.refreshToken else {
