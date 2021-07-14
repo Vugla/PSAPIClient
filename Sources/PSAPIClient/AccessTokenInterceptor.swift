@@ -53,8 +53,12 @@ public class AccessTokenInterceptor<T: OauthTokenProvider>: RequestInterceptor {
         
         guard let response = request.task?.response as? HTTPURLResponse,
             response.statusCode == 401,
-            let currentRefreshToken = accessTokenProvider.refreshToken
+            request.task?.currentRequest?.url?.absoluteString.contains("user/app/token/refresh") == false
             else { return completion(.doNotRetryWithError(error)) }
+        
+        guard let currentRefreshToken = accessTokenProvider.refreshToken else {
+            return doNotRetry(error: NSError(domain: "Authorization", code: 600))
+        }
         
         queue.sync {
             requestsToRetry.append(completion)
@@ -65,6 +69,7 @@ public class AccessTokenInterceptor<T: OauthTokenProvider>: RequestInterceptor {
                     .sink(receiveCompletion: { [weak self](response) in
                         if case let .failure(error) = response {
                             self?.doNotRetry(error: error)
+                            self?.accessTokenProvider.logout()
                         }
                     }) { [weak self](response) in
                         self?.updateTokens(response: response)
