@@ -41,7 +41,7 @@ public class AccessTokenInterceptor<T: OauthTokenProvider>: RequestInterceptor {
     //  MARK: - Refresh logic
     public func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
         guard let accessToken = accessTokenProvider.accessToken,
-            urlRequest.pathContains(anyOf: accessTokenProvider.authPaths) == false
+            !urlRequest.pathContains(anyOf: accessTokenProvider.authPaths)
             else { return completion(.success(urlRequest)) }
         
         var urlRequest = urlRequest
@@ -53,7 +53,7 @@ public class AccessTokenInterceptor<T: OauthTokenProvider>: RequestInterceptor {
     public func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {
         guard let response = request.task?.response as? HTTPURLResponse,
             response.statusCode == 401,
-            request.task?.currentRequest?.pathContains(anyOf: accessTokenProvider.doNotRefreshPaths) == false
+            request.task?.currentRequest?.pathContains(anyOf: accessTokenProvider.doNotRefreshPaths) != true
             else { return completion(.doNotRetryWithError(error)) }
         
         guard let currentRefreshToken = accessTokenProvider.refreshToken else {
