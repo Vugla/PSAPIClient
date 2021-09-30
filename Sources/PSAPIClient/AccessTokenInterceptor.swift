@@ -24,6 +24,7 @@ public protocol OauthTokenProvider {
     var doNotRefreshPaths: [String] { get }
     func logout()
     func getNewToken(_ token: String) -> AnyPublisher<Response, NetworkError<ErrorType>>
+    var customAuthHeader: String? { get }
 }
 
 public class AccessTokenInterceptor<T: OauthTokenProvider>: RequestInterceptor {
@@ -45,7 +46,11 @@ public class AccessTokenInterceptor<T: OauthTokenProvider>: RequestInterceptor {
             else { return completion(.success(urlRequest)) }
         
         var urlRequest = urlRequest
-        urlRequest.setValue("Bearer " + accessToken, forHTTPHeaderField: "Authorization")
+        if let customAuthHeader = accessTokenProvider.customAuthHeader {
+            urlRequest.setValue(accessToken, forHTTPHeaderField: customAuthHeader)
+        } else {
+            urlRequest.setValue("Bearer " + accessToken, forHTTPHeaderField: "Authorization")
+        }
         
         completion(.success(urlRequest))
     }
